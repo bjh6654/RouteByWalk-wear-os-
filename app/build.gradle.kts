@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,6 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField("String", "TMAP_API_KEY", gradleLocalProperties(rootDir, providers).getProperty("TMAP_API_KEY"))
     }
 
     buildTypes {
@@ -60,6 +63,7 @@ dependencies {
     implementation(libs.horologist.compose.tools)
     implementation(libs.horologist.tiles)
     implementation(libs.watchface.complications.data.source.ktx)
+    implementation(libs.play.services.location)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
