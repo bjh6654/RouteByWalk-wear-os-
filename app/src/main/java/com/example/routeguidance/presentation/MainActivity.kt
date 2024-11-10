@@ -32,18 +32,18 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.TimeText
 import com.example.routeguidance.R
 import com.example.routeguidance.presentation.theme.RouteGuidanceTheme
+import com.skt.tmap.BuildConfig
+import com.skt.tmap.TMapGpsManager
 import com.skt.tmap.TMapView
-import com.skt.tmap.TMapPoint
 
-class MainActivity : ComponentActivity() {
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            // 권한이 허용되면 현재 위치를 가져오고 맵을 이동시킵니다.
-            tMapView?.let { moveToCurrentLocation(it) }
-        }
-    }
-
+class MainActivity : ComponentActivity(), TMapGpsManager.OnLocationChangedListener {
     var tMapView: TMapView? = null
+    var userLocation: Location? = null
+
+    override fun onLocationChange(location: Location) {
+        this.userLocation = location
+        moveToCurrentLocation(tMapView!!)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,12 +55,13 @@ class MainActivity : ComponentActivity() {
         }
 
         tMapView = TMapView(this)
-        tMapView?.setSKTMapApiKey("9fa74b98-aec6-4555-95a8-61ce351346f7")
+        tMapView?.setSKTMapApiKey(com.example.routeguidance.BuildConfig.TMAP_API_KEY)
 
         tMapView?.setOnMapReadyListener {
-            Log.v("print", "loaded")
             // 맵이 준비되면 현재 위치로 이동
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                var tMapManager = TMapGpsManager(this)
+                tMapManager.openGps()
                 moveToCurrentLocation(tMapView!!)
             } else {
                 // 권한 요청
@@ -70,23 +71,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun moveToCurrentLocation(tMapView: TMapView) {
-        // 현재 위치 가져오기
-        val manager = getSystemService(LOCATION_SERVICE) as LocationManager
-        val listener: LocationListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                Log.d("map_test,","${location.latitude}, ${location.longitude}, ${location.accuracy}")
-            }
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            // 권한이 허용되면 현재 위치를 가져오고 맵을 이동시킵니다.
+            tMapView?.let { moveToCurrentLocation(it) }
         }
-//        manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 10f, listener)
-//        // (.. 생략 ..) //
-//        manager.removeUpdates(listener)
-//        Log.v("print", currentLocation.toString())
-//        currentLocation?.let {
-//            // 현재 위치로 맵의 중심을 이동
-//            val tMapPoint = TMapPoint(it.latitude, it.longitude)
-//            tMapView.setCenterPoint(tMapPoint.longitude, tMapPoint.latitude)
-//        }
+    }
+
+    private fun moveToCurrentLocation(tMapView: TMapView) {
+        if (userLocation != null) {
+            tMapView.setCenterPoint(userLocation!!.latitude, userLocation!!.longitude, true)
+        }
     }
 }
 
@@ -99,14 +94,9 @@ fun WearApp(tmapview: TMapView?) {
                 .background(MaterialTheme.colors.background),
             contentAlignment = Alignment.Center
         ) {
-            // 지도 컴포넌트를 여기에 배치
             MapView(tmapview)
 
-//            // 시간 표시를 검은 배경에 흰색 글씨로 표시
             TimeTextWithBackground()
-//
-//            // 인사 메시지
-//            Greeting(greetingName = greetingName)
         }
     }
 }
@@ -124,11 +114,11 @@ fun MapView(tmapview: TMapView?) {
 fun TimeTextWithBackground() {
     Box(
         modifier = Modifier
-            .background(Color.Transparent)  // 검은색 배경 설정
+            .background(Color.Transparent)
         ,contentAlignment = Alignment.Center
     ) {
         TimeText(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(4.dp),
         )
     }
 }
