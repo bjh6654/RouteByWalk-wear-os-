@@ -49,10 +49,9 @@ dependencies {
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
 //    implementation(libs.compose.material)
-    implementation("androidx.compose.material:material:1.7.1")
-    implementation("androidx.compose.material3:material3:1.3.0")
-    implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
-    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.3.0")
+//    implementation("androidx.compose.material:material:1.7.1")
+    implementation(libs.material3)
+    implementation(libs.androidx.material3.adaptive.navigation.suite)
     implementation(libs.compose.foundation)
     implementation(libs.wear.tooling.preview)
     implementation(libs.activity.compose)
@@ -72,5 +71,12 @@ dependencies {
 
     implementation(files("libs/tmap-sdk-1.5.aar"))
     implementation(files("libs/vsm-tmap-sdk-v2-android-1.6.60.aar"))
-    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.material)
+
+    implementation(libs.retrofit) // Retrofit 2.9.0
+    implementation(libs.converter.gson) // Gson Converter
+    // Coroutines (비동기 처리 라이브러리)
+    implementation(libs.kotlinx.coroutines.android) // 최신 Kotlin Coroutines
+    // Lifecycle (ViewModel, LiveData 등 UI와 관련된 아키텍처 컴포넌트)
+    implementation(libs.androidx.lifecycle.runtime.ktx) // 최신 라이프사이클 라이브러리
 }
