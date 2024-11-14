@@ -52,6 +52,7 @@ dependencies {
 //    implementation("androidx.compose.material:material:1.7.1")
     implementation(libs.material3)
     implementation(libs.androidx.material3.adaptive.navigation.suite)
+    implementation(libs.androidx.compose.material)
     implementation(libs.compose.foundation)
     implementation(libs.wear.tooling.preview)
     implementation(libs.activity.compose)
@@ -79,4 +80,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android) // 최신 Kotlin Coroutines
     // Lifecycle (ViewModel, LiveData 등 UI와 관련된 아키텍처 컴포넌트)
     implementation(libs.androidx.lifecycle.runtime.ktx) // 최신 라이프사이클 라이브러리
+
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

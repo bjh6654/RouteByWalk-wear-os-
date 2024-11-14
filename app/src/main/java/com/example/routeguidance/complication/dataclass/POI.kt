@@ -24,5 +24,5 @@ data class Poi(
     val frontLat: String,
     val frontLon: String,
     val noorLat: String,
-    val noorLon: String
+    val noorLon: String,
 )

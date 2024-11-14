@@ -78,7 +78,7 @@ fun ButtonSearchPOI(
             .height(height)
             .alpha(0.7f),
         onClick = {
-            keyword = "김해시"
+            keyword = "푸르지오 하이엔드 1차"
         }
     ) {
         Icon(
@@ -92,7 +92,7 @@ fun ButtonSearchPOI(
 }
 
 @Composable
-fun PoiItem(poi: Poi) {
+fun PoiItem(poi: Poi, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,12 +100,13 @@ fun PoiItem(poi: Poi) {
             .height(80.dp)  // Card의 높이 설정
             .padding(10.dp),  // Card의 외부 여백 설정
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),  // Card의 그림자 설정
-        shape = MaterialTheme.shapes.medium  // Card의 모서리 곡률 설정
+        shape = MaterialTheme.shapes.medium,  // Card의 모서리 곡률 설정
+        onClick = onClick
     ) {
         // Card 내부 내용
         Box(
             contentAlignment = Alignment.Center,  // 내용 가운데 정렬
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             Text(text = poi.name, style = MaterialTheme.typography.body2)
         }
