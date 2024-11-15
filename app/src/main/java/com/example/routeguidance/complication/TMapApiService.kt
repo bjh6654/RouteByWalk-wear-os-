@@ -12,6 +12,9 @@ interface TMapApiService {
         @Query("version") version: Int = 1,
         @Query("searchKeyword") keyword: String,
         @Query("poiGroupYn") poiGroupYn: String = "Y",
+        @Query("centerLat") centerLat: Float? = null,
+        @Query("centerLon") centerLon: Float? = null,
+        @Query("radius") radius: Int = 0,
 //        @Query("radius") radius: Int = 0, // 기본 반경을 500m로 설정
         @Query("page") page: Int = 1,
         @Header("appKey") appKey: String = com.example.routeguidance.BuildConfig.TMAP_API_KEY // TMap API Key

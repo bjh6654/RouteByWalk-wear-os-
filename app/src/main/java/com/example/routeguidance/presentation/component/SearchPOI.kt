@@ -21,19 +21,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.MaterialTheme
-import com.example.routeguidance.R
 import com.example.routeguidance.complication.RetrofitClient
 import com.example.routeguidance.complication.dataclass.Poi
+import com.skt.tmap.TMapPoint
 
 @Composable
 fun ButtonSearchPOI(
     width: Dp,
     height: Dp,
-    onClick: (List<Poi>) -> Unit
+    onClick: (List<Poi>) -> Unit,
+    location: TMapPoint,
+    icon: Painter,
+    searchKeyword: String,
+    radius: Int = 0
 ) {
     var keyword by remember { mutableStateOf("") }
     var textValue by remember { mutableStateOf("") }
@@ -49,7 +53,11 @@ fun ButtonSearchPOI(
             errorMessage = null
 
             Log.v("POI SEARCH", keyword)
-            val response = RetrofitClient.apiService.searchPOIs(keyword = keyword)
+            val response = RetrofitClient.apiService.searchPOIs(
+                keyword = keyword,
+                centerLat = location.latitude.toFloat(),
+                centerLon = location.longitude.toFloat(),
+                radius = radius)
             poiList = response.searchPoiInfo.pois.poi
 
             loading = false
@@ -78,14 +86,14 @@ fun ButtonSearchPOI(
             .height(height)
             .alpha(0.7f),
         onClick = {
-            keyword = "푸르지오 하이엔드 1차"
+            keyword = searchKeyword
         }
     ) {
         Icon(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(3.dp),
-            painter = painterResource(R.drawable.baseline_search_24),
+            painter = icon,
             contentDescription = "Close view",
         )
     }
