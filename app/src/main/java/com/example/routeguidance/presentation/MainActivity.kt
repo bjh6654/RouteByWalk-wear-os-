@@ -356,6 +356,7 @@ fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean
             .alpha(0.7f)
         ,onClick = {
             if (isCenter.value) {
+
                 isCompass.value = !isCompass.value
 
                 if (isCompass.value) {
