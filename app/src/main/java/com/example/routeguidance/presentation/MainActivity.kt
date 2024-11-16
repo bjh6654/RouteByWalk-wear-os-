@@ -366,6 +366,7 @@ fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean
                     locationMarker.id = "tmpLocationIcon"
                     tMapView.addTMapMarkerItem(locationMarker)
 
+
                     tMapView.isCompassMode = isCompass.value
                     tMapView.isTrackingMode = isCompass.value
                 } else {
