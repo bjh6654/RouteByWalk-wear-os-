@@ -48,8 +48,9 @@ dependencies {
     implementation(libs.ui)
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
-//    implementation(libs.compose.material)
-//    implementation("androidx.compose.material:material:1.7.1")
+    implementation("androidx.wear.compose:compose-material:1.4.0") // 최신 버전 확인 필요
+    implementation("androidx.wear.compose:compose-foundation:1.2.0") // Foundation 라이브러리
+    implementation("androidx.wear.compose:compose-navigation:1.4.0") // 네비게이션 관련 라이브러리
     implementation(libs.material3)
     implementation(libs.androidx.material3.adaptive.navigation.suite)
     implementation(libs.androidx.compose.material)

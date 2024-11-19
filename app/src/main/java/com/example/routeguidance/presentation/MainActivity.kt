@@ -34,10 +34,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -57,7 +59,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
@@ -69,12 +70,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.TimeText
 import com.example.routeguidance.BuildConfig
 import com.example.routeguidance.R
 import com.example.routeguidance.complication.dataclass.Poi
 import com.example.routeguidance.presentation.component.ButtonSearchPOI
 import com.example.routeguidance.presentation.component.PoiItem
+import com.example.routeguidance.presentation.component.SearchButtonWithAnimation
 import com.example.routeguidance.presentation.theme.RouteGuidanceTheme
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationAvailability
@@ -151,53 +152,59 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
             override fun onLocationAvailability(p0: LocationAvailability) {
                 super.onLocationAvailability(p0)
 
-                if (!p0.isLocationAvailable) {
-                    tMapView?.let {
-                        if (it.mapType != null) {
-                            // 현재 위치 마커 삭제
-                            val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
-                            if (locationMarker.visible) {
-                                locationMarker?.visible = false
-                                it.removeTMapMarkerItem(locationMarker?.id)
+                try {
+                    if (!p0.isLocationAvailable) {
+                        tMapView?.let {
+                            if (it.mapType != null) {
+                                // 현재 위치 마커 삭제
+                                val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
+                                locationMarker.visible = false
+                                it.removeTMapMarkerItem(locationMarker.id)
                                 it.addTMapMarkerItem(locationMarker)
+                                // 기존 위치 마커 삭제
+                                val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
+                                lastLocationMarker.visible = true
+                                lastLocationMarker.setTMapPoint(it.locationPoint.latitude, it.locationPoint.longitude)
+                                locationMarker.setPosition(0.5f, 0.5f)
+                                it.removeTMapMarkerItem(lastLocationMarker.id)
+                                it.addTMapMarkerItem(lastLocationMarker)
                             }
-                            // 기존 위치 마커 삭제
-                            val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
-                            lastLocationMarker.visible = true
-                            it.removeTMapMarkerItem(lastLocationMarker.id)
-                            lastLocationMarker.setTMapPoint(it.locationPoint.latitude, it.locationPoint.longitude)
-                            locationMarker.setPosition(0.5f, 0.5f)
-                            it.addTMapMarkerItem(lastLocationMarker)
                         }
                     }
+                } catch (e: Exception) {
+
                 }
             }
             // 위치 정보가 변경되면
             override fun onLocationResult(p0: LocationResult) {
                 super.onLocationResult(p0)
 
-                val location: Location = p0.locations.last()
-                tMapView?.let {
-                    it.setLocationPoint(location.latitude, location.longitude)
-                    if (it.mapType != null) {
-                        if (!it.isTrackingMode) {
-                            val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
-                            locationMarker?.visible = true
-                            locationMarker.setTMapPoint(location.latitude, location.longitude)
-                            locationMarker.setPosition(0.5f, 0.5f)
-                            it.removeTMapMarkerItem(locationMarker?.id)
-                            it.addTMapMarkerItem(locationMarker)
-                            if (isCenter.value)
-                                it.setCenterPoint(location.latitude, location.longitude, true)
-                        }
-                        // 기존 위치 마커 삭제
-                        val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
-                        if (lastLocationMarker.visible) {
-                            lastLocationMarker.visible = false
-                            it.removeTMapMarkerItem(lastLocationMarker.id)
-                            it.addTMapMarkerItem(lastLocationMarker)
+                try {
+                    val location: Location = p0.locations.last()
+                    tMapView?.let {
+                        it.setLocationPoint(location.latitude, location.longitude)
+                        if (it.mapType != null) {
+                            if (!it.isTrackingMode) {
+                                val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
+                                locationMarker?.visible = true
+                                locationMarker.setTMapPoint(location.latitude, location.longitude)
+                                locationMarker.setPosition(0.5f, 0.5f)
+                                it.removeTMapMarkerItem(locationMarker?.id)
+                                it.addTMapMarkerItem(locationMarker)
+                                if (isCenter.value)
+                                    it.setCenterPoint(location.latitude, location.longitude, true)
+                            }
+                            // 기존 위치 마커 삭제
+                            val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
+                            if (lastLocationMarker.visible) {
+                                lastLocationMarker.visible = false
+                                it.removeTMapMarkerItem(lastLocationMarker.id)
+                                it.addTMapMarkerItem(lastLocationMarker)
+                            }
                         }
                     }
+                } catch (e: Exception) {
+
                 }
             }
         }
@@ -235,7 +242,7 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
 
             RouteGuidanceTheme {
                 MapView(tMapView)
-                TimeTextWithBackground()
+                TimeTextOverlay()
                 Box (
                     modifier = Modifier
                         .fillMaxSize()
@@ -300,7 +307,7 @@ fun CenterRowView(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
             , horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Btn_SearchPOI(tMapView, poiItems, isCenter, isRoute)
-            Btn_TrackCurrentLocation(tMapView, isCenter)
+            Btn_TrackCurrentLocation(tMapView, isCenter, isRoute)
         }
     }
 }
@@ -319,25 +326,71 @@ fun BottomRowView(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isRout
 
 
 
+//@Composable
+//fun TimeTextWithBackground() {
+//    Box (
+//        modifier = Modifier
+//            .clip(RoundedCornerShape(12.dp))
+//            .fillMaxSize(),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        TimeText(
+//            modifier = Modifier.back,
+//            timeTextStyle = TextStyle(color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+//        )
+//    }
+//}
+
 @Composable
-fun TimeTextWithBackground() {
-    Box (
-        modifier = Modifier
-            .padding(5.dp)
+fun TimeTextOverlay(modifier: Modifier = Modifier) {
+    // 3. 현재 시간 가져오기
+    val currentTime = remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime.value = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000L) // 1초마다 업데이트
+        }
+    }
+
+    // 4. TimeText UI
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = Color.Black.copy(alpha = 0.6f), // 반투명 배경
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        TimeText(
-            timeTextStyle = TextStyle(color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = java.text.SimpleDateFormat("HH:mm").format(currentTime.value),
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
 
 @Composable
-fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean>) {
+fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean>, isRoute: MutableState<Boolean>) {
     val isCompass = remember { mutableStateOf(false) }
 
     if (!isCenter.value) {
         isCompass.value = false
-        if (tMapView?.mapType != null) tMapView.isCompassMode = false
+        if (tMapView?.mapType != null) {
+            tMapView.isCompassMode = false
+            if (tMapView.isTrackingMode) {
+                tMapView.isTrackingMode = false
+
+                val locationMarker = tMapView.getMarkerItemFromId("tmpLocationIcon")
+                tMapView.removeTMapMarkerItem("tmpLocationIcon")
+                tMapView.removeTMapMarkerItem("vsmLocationIcon")
+                locationMarker.visible = true
+                locationMarker.id = "vsmLocationIcon"
+                tMapView.addTMapMarkerItem(locationMarker)
+            }
+        }
     }
 
     val icon = if (isCompass.value) {
@@ -356,7 +409,6 @@ fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean
             .alpha(0.7f)
         ,onClick = {
             if (isCenter.value) {
-
                 isCompass.value = !isCompass.value
 
                 if (isCompass.value) {
@@ -366,17 +418,20 @@ fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean
                     locationMarker.id = "tmpLocationIcon"
                     tMapView.addTMapMarkerItem(locationMarker)
 
-
-                    tMapView.isCompassMode = isCompass.value
-                    tMapView.isTrackingMode = isCompass.value
+                    tMapView.isCompassMode = true
+                    tMapView.isTrackingMode = true
+                    if (isRoute.value) {
+                        tMapView.zoomLevel = 15
+                    }
                 } else {
-                    tMapView?.isCompassMode = isCompass.value
-                    tMapView?.isTrackingMode = isCompass.value
+                    tMapView?.isCompassMode = false
+                    tMapView?.isTrackingMode = false
 
                     val locationMarker = tMapView!!.getMarkerItemFromId("tmpLocationIcon")
+                    tMapView.removeTMapMarkerItem("tmpLocationIcon")
+                    tMapView.removeTMapMarkerItem("vsmLocationIcon")
                     locationMarker.visible = true
                     locationMarker.id = "vsmLocationIcon"
-                    tMapView.removeTMapMarkerItem("vsmLocationIcon")
                     tMapView.addTMapMarkerItem(locationMarker)
                 }
 
@@ -440,51 +495,23 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
             }
             .background(Color.Black.copy(alpha = backGroundAlpha))
             .size(buttonSize),
-        contentAlignment = Alignment.CenterStart,
     ) {
-        FloatingActionButton(
-            modifier = Modifier
-                .size(floatButtonHeight)
-                .absoluteOffset(x = 10.dp)
-                .alpha(0.7f),
-            onClick = {
-//                    if (tMapView?.mapType != null && (poiItems.value.isNotEmpty() || tMapView.getPolyLineFromId("route") != null)) {
-                if (isItemAdded.value) {
-                    val lastLocationMarker = tMapView!!.getMarkerItemFromId("lastLocation")
-                    val locationMarker = tMapView.getMarkerItemFromId("vsmLocationIcon")
-                    tMapView.removeAllTMapPolyLine()
-                    tMapView.removeAllTMapMarkerItem()
-                    tMapView.addTMapMarkerItem(lastLocationMarker)
-                    tMapView.addTMapMarkerItem(locationMarker)
-                    poiItems.value = emptyList()
-                    isRoute.value = false
-                } else {
-                    isToggled.value = !isToggled.value
-                }
-            }
-        ) {
-            Icon(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(3.dp),
-                painter = icon,
-                contentDescription = if (isToggled.value) "Toggled On" else "Toggled Off",
-            )
-        }
         if (isToggled.value) {
-            Box (
+            Column (
                 modifier = Modifier
                     .fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
+                Row (
                     modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures { }
+                        }
                         .padding(top = 20.dp)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.TopCenter
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    ButtonSearchPOI(
-                        width = 55.dp,
-                        height = floatButtonHeight,
+                    SearchButtonWithAnimation(
                         onClick = { poiList ->
                             poiItems.value = poiList
                             // 검색 결과로 각각 마커 생성 후 지도로
@@ -492,58 +519,104 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
                             isToggled.value = false
                         },
                         location = tMapView!!.locationPoint,
-                        icon = painterResource(R.drawable.baseline_search_24),
-                        searchKeyword = "김해시",
                         radius = 10
                     )
                 }
-                Box(
+                Row (
                     modifier = Modifier
-                        .absoluteOffset(x = -45.dp)
-                        .fillMaxSize()
-                        .padding(bottom = 30.dp),
-                    contentAlignment = Alignment.BottomCenter
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp)
+                    ,horizontalArrangement = Arrangement.Center
+                    , verticalAlignment = Alignment.Bottom
                 ) {
-                    ButtonSearchPOI(
-                        width = floatButtonHeight,
-                        height = floatButtonHeight,
-                        onClick = { poiList ->
-                            poiItems.value = poiList
-                            // 검색 결과로 각각 마커 생성 후 지도로
-                            isCenter.value = false
-                            isToggled.value = false
-                        },
-                        location = tMapView!!.locationPoint,
-                        icon = painterResource(R.drawable.baseline_coffee_24),
-                        searchKeyword = "카페",
-                        radius = 3
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .absoluteOffset(x = 45.dp)
-                        .padding(bottom = 30.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    ButtonSearchPOI(
-                        width = floatButtonHeight,
-                        height = floatButtonHeight,
-                        onClick = { poiList ->
-                            poiItems.value = poiList
-                            // 검색 결과로 각각 마커 생성 후 지도로
-                            isCenter.value = false
-                            isToggled.value = false
-                        },
-                        location = tMapView!!.locationPoint,
-                        icon = painterResource(R.drawable.baseline_fastfood_24),
-                        searchKeyword = "패스트푸드",
-                        radius = 3
-                    )
+                    Box (
+                        modifier = Modifier
+                            .absoluteOffset(x = -20.dp)
+                            .wrapContentSize(),
+                    ) {
+                        ButtonSearchPOI(
+                            width = floatButtonHeight,
+                            height = floatButtonHeight,
+                            onClick = { poiList ->
+                                poiItems.value = poiList
+                                // 검색 결과로 각각 마커 생성 후 지도로
+                                isCenter.value = false
+                                isToggled.value = false
+                            },
+                            location = tMapView!!.locationPoint,
+                            icon = painterResource(R.drawable.baseline_coffee_24),
+                            searchKeyword = "카페",
+                            radius = 3
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .absoluteOffset(x = 20.dp)
+                            .wrapContentSize(),
+                    ) {
+                        ButtonSearchPOI(
+                            width = floatButtonHeight,
+                            height = floatButtonHeight,
+                            onClick = { poiList ->
+                                poiItems.value = poiList
+                                // 검색 결과로 각각 마커 생성 후 지도로
+                                isCenter.value = false
+                                isToggled.value = false
+                            },
+                            location = tMapView!!.locationPoint,
+                            icon = painterResource(R.drawable.baseline_fastfood_24),
+                            searchKeyword = "패스트푸드",
+                            radius = 3
+                        )
+                    }
                 }
             }
         }
+        Box (
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            FloatingActionButton(
+                modifier = Modifier
+                    .size(floatButtonHeight)
+                    .absoluteOffset(x = 10.dp)
+                    .alpha(0.7f),
+                onClick = {
+                    if (isItemAdded.value) {
+                        isCenter.value = false
+                        val lastLocationMarker = tMapView!!.getMarkerItemFromId("lastLocation")
+                        var locationMarker = tMapView.getMarkerItemFromId("tmpLocationIcon")
+                        if (locationMarker == null) {
+                            locationMarker = tMapView.getMarkerItemFromId("vsmLocationIcon")
+                        } else {
+                            locationMarker.id = "vsmLocationIcon"
+                            locationMarker.visible = true
+                            tMapView.removeTMapMarkerItem("tmpLocationIcon")
+                        }
+                        tMapView.removeAllTMapPolyLine()
+                        tMapView.removeAllTMapMarkerItem()
 
+                        tMapView.addTMapMarkerItem(locationMarker)
+                        tMapView.addTMapMarkerItem(lastLocationMarker)
+
+
+                        poiItems.value = emptyList()
+                        isRoute.value = false
+                    } else {
+                        isToggled.value = !isToggled.value
+                    }
+                }
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(3.dp),
+                    painter = icon,
+                    contentDescription = if (isToggled.value) "Toggled On" else "Toggled Off",
+                )
+            }
+        }
     }
 }
 
