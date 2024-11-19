@@ -22,6 +22,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -292,8 +293,27 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
 
 @Composable
 fun MapView(tmapview: TMapView?) {
+    val context = LocalContext.current
+    val screenWidth = context.resources.displayMetrics.widthPixels
+    val screenHeight = context.resources.displayMetrics.heightPixels
+
     Box(
         modifier = Modifier
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    val cur = change.position
+                    val pre = change.previousPosition
+
+                    val left = tmapview!!.leftTopPoint.latitude
+                    val top = tmapview.leftTopPoint.longitude
+                    val right = tmapview.rightBottomPoint.latitude
+                    val bottom = tmapview.rightBottomPoint.longitude
+
+                    val newCenterLat = (cur.y - pre.y)/screenWidth * (bottom - top) + tmapview.centerPoint.latitude
+                    val newCenterLon = (cur.x - pre.x)/screenHeight * (right - left) + tmapview.centerPoint.longitude
+                    tmapview.setCenterPoint(newCenterLat, newCenterLon)
+                }
+            }
             .fillMaxSize()
             .background(MaterialTheme.colors.background),
         contentAlignment = Alignment.Center,
@@ -554,15 +574,15 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
     val isToggled = remember { mutableStateOf(false) }
     val isItemAdded = remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
-    var selectedDistance by remember { mutableStateOf("3 km") }
+    var selectedDistance by remember { mutableStateOf("10 km") }
 
     fun getRadiusFromSelected(): Int {
         return when (selectedDistance) {
             "1 km" -> 1
-            "2 km" -> 2
             "3 km" -> 3
-            "4 km" -> 4
             "5 km" -> 5
+            "10 km" -> 10
+            "30 km" -> 30
             else -> 0
         }
     }
@@ -632,7 +652,7 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val distances = listOf("1 km", "2 km", "3 km", "5 km", "전국")
+                    val distances = listOf("1 km", "3 km", "5 km", "10 km", "30 km", "전국")
                     Box (
                         modifier = Modifier
                             .width(40.dp)
