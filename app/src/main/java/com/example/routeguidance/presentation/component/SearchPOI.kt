@@ -1,8 +1,13 @@
 package com.example.routeguidance.presentation.component
 
 //import androidx.compose.foundation.layout.Row
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
@@ -15,12 +20,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -149,7 +157,26 @@ fun SearchButtonWithAnimation(
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val context= LocalContext.current
+    val context = LocalContext.current
+
+    // ActivityResultLauncher 설정
+    val speechRecognizerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
+                val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                if (!results.isNullOrEmpty()) {
+                    inputKeyword = results[0] // 음성 입력 결과를 TextField 값으로 설정
+                }
+            }
+        }
+
+    // 음성 입력 Intent 설정
+    val speechRecognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR") // 한국어 입력
+        putExtra(RecognizerIntent.EXTRA_PROMPT, "말씀해주세요")
+    }
 
     LaunchedEffect(searchKeyword) {
         try {
@@ -179,21 +206,6 @@ fun SearchButtonWithAnimation(
         }
     }
 
-//    LaunchedEffect(poiList) {
-//        try {
-//            if (poiList.isEmpty()) {
-//                Toast.makeText(context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT).show()
-//                return@LaunchedEffect
-//            }
-//
-//            onClick(poiList)
-//        } catch (e: Exception) {
-//            Log.v("POI ERROR", e.toString())
-//            errorMessage = "검색 결과가 없습니다.: ${e.message}"
-//            loading = false
-//        }
-//    }
-
     Box (
         modifier = Modifier
             .fillMaxWidth()
@@ -210,6 +222,11 @@ fun SearchButtonWithAnimation(
         ) {
             if (isExpanded) {
                 TextField(
+                    modifier = Modifier
+                        .background(Color.Black)
+                        .fillMaxHeight()
+                        .width(searchBarWidth)
+                        .clip(RoundedCornerShape(cornerRadius)),
                     value = inputKeyword,
                     onValueChange = { inputKeyword = it },
                     textStyle = TextStyle(
@@ -223,12 +240,7 @@ fun SearchButtonWithAnimation(
                             else inputKeyword,
                             style = TextStyle(fontSize = 12.sp)
                         )
-                    },
-                    modifier = Modifier
-                        .background(Color.Black)
-                        .fillMaxHeight()
-                        .width(searchBarWidth)
-                        .clip(RoundedCornerShape(cornerRadius)),
+                    }
                 )
             }
             FloatingActionButton(
@@ -252,6 +264,29 @@ fun SearchButtonWithAnimation(
                 )
             }
         }
+        if (isExpanded) {
+            Row (
+              modifier = Modifier
+                  .padding(top = 100.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        // 음성 입력 시작
+                        speechRecognizerLauncher.launch(speechRecognizerIntent)
+                    },
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_mic_24),
+                        contentDescription = "음성 입력",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -260,16 +295,15 @@ fun PoiItem(poi: Poi, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .width(200.dp)  // Card의 너비 설정
-            .height(80.dp)  // Card의 높이 설정
-            .padding(10.dp),  // Card의 외부 여백 설정
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),  // Card의 그림자 설정
-        shape = MaterialTheme.shapes.medium,  // Card의 모서리 곡률 설정
+            .width(200.dp)
+            .height(80.dp)
+            .padding(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+        shape = MaterialTheme.shapes.medium,
         onClick = onClick
     ) {
-        // Card 내부 내용
         Box(
-            contentAlignment = Alignment.Center,  // 내용 가운데 정렬
+            contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize(),
         ) {
             Text(text = poi.name, style = MaterialTheme.typography.body2)
