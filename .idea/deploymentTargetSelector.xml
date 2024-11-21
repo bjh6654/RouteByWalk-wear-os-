@@ -7,10 +7,10 @@
       </SelectionState>
       <SelectionState runConfigName="RouteGuidance">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-11-19T17:30:04.027565Z">
+        <DropdownSelection timestamp="2024-11-21T18:05:05.957870Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jingu/.android/avd/Galaxy_watch_7_44mm_API_34.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFAX60L6EAP" />
             </handle>
           </Target>
         </DropdownSelection>

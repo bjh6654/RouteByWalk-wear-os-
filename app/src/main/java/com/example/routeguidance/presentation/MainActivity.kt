@@ -40,14 +40,12 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -65,7 +63,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -81,7 +78,7 @@ import androidx.wear.compose.material.MaterialTheme
 import com.example.routeguidance.BuildConfig
 import com.example.routeguidance.R
 import com.example.routeguidance.complication.dataclass.Poi
-import com.example.routeguidance.complication.globalState
+import com.example.routeguidance.complication.state.globalState
 import com.example.routeguidance.presentation.component.ButtonSearchPOI
 import com.example.routeguidance.presentation.component.PoiItem
 import com.example.routeguidance.presentation.component.SearchButtonWithAnimation
@@ -100,9 +97,14 @@ import com.skt.tmap.overlay.TMapMarkerItem
 import com.skt.tmap.overlay.TMapPolyLine
 import kotlinx.coroutines.delay
 import org.w3c.dom.Document
-import org.w3c.dom.Element
+import org.w3c.dom.Node
 import java.text.SimpleDateFormat
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 val floatButtonHeight: Dp = 35.dp
 
@@ -119,18 +121,6 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
         if (isCenter.value)
             isCenter.value = false
     }
-//    override fun onLocationChange(location: Location) {
-//        tMapView?.let {
-//            it.setLocationPoint(location.latitude, location.longitude)
-//            if (it.mapType != null) {
-//                val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
-//                it.removeTMapMarkerItem(locationMarker?.id)
-//                locationMarker.setTMapPoint(location.latitude, location.longitude)
-//                locationMarker.setPosition(0.5f, 0.5f)
-//                it.addTMapMarkerItem(locationMarker)
-//            }
-//        }
-//    }
 
     @SuppressLint("MissingPermission")
     private fun getLastKnownLocation(): Location? {
@@ -150,77 +140,6 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
         tMapView = TMapView(this)
         // Set TmapView
         tMapView?.setSKTMapApiKey(BuildConfig.TMAP_API_KEY)
-
-        // Google Service의 fusedLocationService를 통해 위치 정보 갱신
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
-
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000).apply {
-            setMinUpdateDistanceMeters(2F)
-            setMinUpdateIntervalMillis(500L)
-            setWaitForAccurateLocation(true)
-        }.build()
-        val locationCallback = object : LocationCallback() {
-            // 위치 정보 수신 가능 여부가 변경
-            override fun onLocationAvailability(p0: LocationAvailability) {
-                super.onLocationAvailability(p0)
-
-                try {
-                    if (!p0.isLocationAvailable) {
-                        tMapView?.let {
-                            if (it.mapType != null) {
-                                // 현재 위치 마커 삭제
-                                val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
-                                locationMarker.visible = false
-                                it.removeTMapMarkerItem(locationMarker.id)
-                                it.addTMapMarkerItem(locationMarker)
-                                // 기존 위치 마커 삭제
-                                val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
-                                lastLocationMarker.visible = true
-                                lastLocationMarker.setTMapPoint(it.locationPoint.latitude, it.locationPoint.longitude)
-                                locationMarker.setPosition(0.5f, 0.5f)
-                                it.removeTMapMarkerItem(lastLocationMarker.id)
-                                it.addTMapMarkerItem(lastLocationMarker)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-
-                }
-            }
-            // 위치 정보가 변경되면
-            override fun onLocationResult(p0: LocationResult) {
-                super.onLocationResult(p0)
-
-                try {
-                    val location: Location = p0.locations.last()
-                    tMapView?.let {
-                        it.setLocationPoint(location.latitude, location.longitude)
-                        if (it.mapType != null) {
-                            if (!it.isTrackingMode) {
-                                val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
-                                locationMarker?.visible = true
-                                locationMarker.setTMapPoint(location.latitude, location.longitude)
-                                locationMarker.setPosition(0.5f, 0.5f)
-                                it.removeTMapMarkerItem(locationMarker?.id)
-                                it.addTMapMarkerItem(locationMarker)
-                                if (isCenter.value)
-                                    it.setCenterPoint(location.latitude, location.longitude, true)
-                            }
-                            // 기존 위치 마커 삭제
-                            val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
-                            if (lastLocationMarker.visible) {
-                                lastLocationMarker.visible = false
-                                it.removeTMapMarkerItem(lastLocationMarker.id)
-                                it.addTMapMarkerItem(lastLocationMarker)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-
-                }
-            }
-        }
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
 
         tMapView?.setOnMapReadyListener {
             tMapView?.mapType = TMapView.MapType.NIGHT
@@ -251,6 +170,98 @@ class MainActivity : ComponentActivity(), TMapView.OnDisableScrollWithZoomLevelC
         setContent {
             val poiItems = remember { mutableStateOf<List<Poi>>(emptyList()) }
             val isRoute = remember { mutableStateOf(false) }
+            val state: globalState = viewModel()
+
+            // Google Service의 fusedLocationService를 통해 위치 정보 갱신
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+
+            val balanceLocationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 2000).apply {
+                setMinUpdateDistanceMeters(3F)
+                setMinUpdateIntervalMillis(1000L)
+                setMaxUpdateDelayMillis(5000L)
+                setWaitForAccurateLocation(false)
+            }.build()
+            val highLocationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000).apply {
+                setMinUpdateDistanceMeters(3F)
+                setMinUpdateIntervalMillis(1000L)
+                setMaxUpdateDelayMillis(5000L)
+                setWaitForAccurateLocation(true)
+            }.build()
+            val locationCallback = object : LocationCallback() {
+                // 위치 정보 수신 가능 여부가 변경
+                override fun onLocationAvailability(p0: LocationAvailability) {
+                    super.onLocationAvailability(p0)
+
+                    try {
+                        if (!p0.isLocationAvailable) {
+                            tMapView?.let {
+                                if (it.mapType != null) {
+                                    // 현재 위치 마커 삭제
+                                    val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
+                                    locationMarker.visible = false
+                                    it.removeTMapMarkerItem(locationMarker.id)
+                                    it.addTMapMarkerItem(locationMarker)
+                                    // 기존 위치 마커 삭제
+                                    val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
+                                    lastLocationMarker.visible = true
+                                    lastLocationMarker.setTMapPoint(it.locationPoint.latitude, it.locationPoint.longitude)
+                                    locationMarker.setPosition(0.5f, 0.5f)
+                                    it.removeTMapMarkerItem(lastLocationMarker.id)
+                                    it.addTMapMarkerItem(lastLocationMarker)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+
+                    }
+                }
+                // 위치 정보가 변경되면
+                override fun onLocationResult(p0: LocationResult) {
+                    super.onLocationResult(p0)
+
+                    try {
+                        val location: Location = p0.locations
+                            .minBy { loc -> loc.accuracy }
+                        tMapView?.let {
+                            it.setLocationPoint(location.latitude, location.longitude)
+                            state.updateLastlocationUpdatedTime()
+                            Log.v("updatedLocation", location.provider.toString()+": " +location.accuracy.toString())
+                            if (it.mapType != null) {
+                                if (!it.isTrackingMode) {
+                                    val locationMarker = it.getMarkerItemFromId("vsmLocationIcon")
+                                    locationMarker?.visible = true
+                                    locationMarker.setTMapPoint(location.latitude, location.longitude)
+                                    locationMarker.setPosition(0.5f, 0.5f)
+                                    it.removeTMapMarkerItem(locationMarker?.id)
+                                    it.addTMapMarkerItem(locationMarker)
+                                    if (isCenter.value)
+                                        it.setCenterPoint(location.latitude, location.longitude, true)
+                                }
+                                // 기존 위치 마커 삭제
+                                val lastLocationMarker = it.getMarkerItemFromId("lastLocation")
+                                if (lastLocationMarker.visible) {
+                                    lastLocationMarker.visible = false
+                                    it.removeTMapMarkerItem(lastLocationMarker.id)
+                                    it.addTMapMarkerItem(lastLocationMarker)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+
+                    }
+                }
+            }
+//            fusedLocationProviderClient.requestLocationUpdates(balanceLocationRequest, locationCallback, Looper.getMainLooper())
+
+            LaunchedEffect(isRoute.value) {
+                if (isRoute.value) {
+                    fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+                    fusedLocationProviderClient.requestLocationUpdates(highLocationRequest, locationCallback, Looper.getMainLooper())
+                } else {
+                    fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+                    fusedLocationProviderClient.requestLocationUpdates(balanceLocationRequest, locationCallback, Looper.getMainLooper())
+                }
+            }
 
             RouteGuidanceTheme {
                 MapView(tMapView)
@@ -309,8 +320,10 @@ fun MapView(tmapview: TMapView?) {
                     val right = tmapview.rightBottomPoint.latitude
                     val bottom = tmapview.rightBottomPoint.longitude
 
-                    val newCenterLat = (cur.y - pre.y)/screenWidth * (bottom - top) + tmapview.centerPoint.latitude
-                    val newCenterLon = (cur.x - pre.x)/screenHeight * (right - left) + tmapview.centerPoint.longitude
+                    val newCenterLat =
+                        (cur.y - pre.y) / screenWidth * (bottom - top) + tmapview.centerPoint.latitude
+                    val newCenterLon =
+                        (cur.x - pre.x) / screenHeight * (right - left) + tmapview.centerPoint.longitude
                     tmapview.setCenterPoint(newCenterLat, newCenterLon)
                 }
             }
@@ -356,23 +369,6 @@ fun BottomRowView(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isRout
     }
 }
 
-
-
-//@Composable
-//fun TimeTextWithBackground() {
-//    Box (
-//        modifier = Modifier
-//            .clip(RoundedCornerShape(12.dp))
-//            .fillMaxSize(),
-//        contentAlignment = Alignment.Center
-//    ) {
-//        TimeText(
-//            modifier = Modifier.back,
-//            timeTextStyle = TextStyle(color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-//        )
-//    }
-//}
-
 @Composable
 fun TimeTextOverlay(modifier: Modifier = Modifier) {
     // 3. 현재 시간 가져오기
@@ -407,38 +403,135 @@ fun TimeTextOverlay(modifier: Modifier = Modifier) {
 @Composable
 fun DestinationDetail(tMapView: TMapView?, isRoute: MutableState<Boolean>, state: globalState = viewModel()) {
     val doc = state.destinationDocument
+    val updatedTime = state.lastlocationUpdatedTime
 
-    fun sumDistanceForLinePlacemarks(doc: Document?): String {
-        // 네임스페이스를 고려하여 "tmap:nodeType"이 "LINE"인 <Placemark> 요소 찾기
-        if (doc == null) return "0 m"
-        val nodeList = doc.getElementsByTagName("tmap:nodeType")
-        var totalDistance = 0
+    data class Point(val latitude: Double, val longitude: Double)
+
+    fun Node.getChildNode(tagName: String): Node? {
+        val children = this.childNodes
+        for (i in 0 until children.length) {
+            if (children.item(i).nodeName == tagName) {
+                return children.item(i)
+            }
+        }
+        return null
+    }
+
+    fun haversineDistance(start: Point, end: Point): Double {
+        val R = 6371000.0 // 지구 반지름 (meters)
+        val lat1 = Math.toRadians(start.latitude)
+        val lon1 = Math.toRadians(start.longitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val lon2 = Math.toRadians(end.longitude)
+
+        val dlat = lat2 - lat1
+        val dlon = lon2 - lon1
+
+        val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return R * c
+    }
+
+    fun parseRouteFromXML(document: Document?): List<Point> {
+        if (document == null) return emptyList<Point>()
+
+        val route = mutableListOf<Point>()
+        val nodeList = document.getElementsByTagName("Placemark")
+
         for (i in 0 until nodeList.length) {
-            val nodeTypeElement = nodeList.item(i) as Element
-
-            // "LINE"인 경우에만 처리
-            if (nodeTypeElement.textContent.toString() == "LINE") {
-                // 해당 Placemark 요소 찾기
-                var placemark = nodeTypeElement.parentNode
-                while (placemark != null && placemark is Element && placemark.tagName != "Placemark") {
-                    placemark = placemark.parentNode
-                }
-
-                if (placemark != null && placemark is Element) {
-                    // Placemark 내에서 tmap:distance 값 찾기
-                    val distanceElement = placemark.getElementsByTagName("tmap:distance").item(0)
-                    if (distanceElement != null) {
-                        val distance = distanceElement.textContent.toIntOrNull()
-                        if (distance != null) {
-                            totalDistance += distance
+            val node = nodeList.item(i)
+            val lineString = node.getChildNode("LineString")
+            if (lineString != null) {
+                val coordinates = lineString.getChildNode("coordinates")?.textContent
+                if (!coordinates.isNullOrEmpty()) {
+                    coordinates.split(" ").forEach { coordinate ->
+                        val parts = coordinate.split(",")
+                        if (parts.size >= 2) {
+                            val lon = parts[0].toDouble()
+                            val lat = parts[1].toDouble()
+                            route.add(Point(lat, lon))
                         }
                     }
                 }
             }
         }
-            return if (totalDistance >= 1000) (String.format("%.1f", totalDistance/1000.0) + " km")
-            else "$totalDistance m"
+
+        return route
     }
+
+    fun calculateRemainingDistance(currentLocation: Point, route: List<Point>): String {
+        var remainingDistance = 0.0
+        var foundCurrentLocation = false
+        var closestDistance = Double.MAX_VALUE // 가장 가까운 경로 지점까지의 거리
+        var closestPointIndex = -1 // 가장 가까운 지점의 인덱스
+
+        for (i in route.indices) {
+            val point = route[i]
+            val distanceToCurrent = haversineDistance(currentLocation, point)
+
+            if (!foundCurrentLocation) {
+                // 현재 위치와 경로 지점 간의 거리 확인
+                if (distanceToCurrent < closestDistance) {
+                    closestDistance = distanceToCurrent
+                    closestPointIndex = i
+                }
+
+                // 현재 위치가 경로 상이라고 간주할 수 있는 경우
+                if (distanceToCurrent < 30.0) {
+                    foundCurrentLocation = true
+                    // 현재 위치 이후부터 거리 계산
+                    for (j in i until route.size - 1) {
+                        remainingDistance += haversineDistance(route[j], route[j + 1])
+                    }
+                    break
+                }
+            }
+        }
+
+        // 현재 위치가 경로 상에 없을 경우, 가장 가까운 지점까지의 거리 추가
+        if (!foundCurrentLocation && closestPointIndex != -1) {
+            remainingDistance = closestDistance // 가장 가까운 지점까지의 거리 추가
+            // 가장 가까운 지점 이후부터 거리 계산
+            for (j in closestPointIndex until route.size - 1) {
+                remainingDistance += haversineDistance(route[j], route[j + 1])
+            }
+        }
+
+        return if (remainingDistance >= 1000) (String.format("%.1f", remainingDistance.toInt()/1000.0) + " km")
+        else "${remainingDistance.toInt()} m"
+    }
+
+//    fun sumDistanceForLinePlacemarks(doc: Document?): String {
+//        // 네임스페이스를 고려하여 "tmap:nodeType"이 "LINE"인 <Placemark> 요소 찾기
+//        if (doc == null) return "0 m"
+//        val nodeList = doc.getElementsByTagName("tmap:nodeType")
+//        var totalDistance = 0
+//        for (i in 0 until nodeList.length) {
+//            val nodeTypeElement = nodeList.item(i) as Element
+//
+//            // "LINE"인 경우에만 처리
+//            if (nodeTypeElement.textContent.toString() == "LINE") {
+//                // 해당 Placemark 요소 찾기
+//                var placemark = nodeTypeElement.parentNode
+//                while (placemark != null && placemark is Element && placemark.tagName != "Placemark") {
+//                    placemark = placemark.parentNode
+//                }
+//
+//                if (placemark != null && placemark is Element) {
+//                    // Placemark 내에서 tmap:distance 값 찾기
+//                    val distanceElement = placemark.getElementsByTagName("tmap:distance").item(0)
+//                    if (distanceElement != null) {
+//                        val distance = distanceElement.textContent.toIntOrNull()
+//                        if (distance != null) {
+//                            totalDistance += distance
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//            return if (totalDistance >= 1000) (String.format("%.1f", totalDistance/1000.0) + " km")
+//            else "$totalDistance m"
+//    }
 
     if (isRoute.value) {
         Box(
@@ -472,7 +565,8 @@ fun DestinationDetail(tMapView: TMapView?, isRoute: MutableState<Boolean>, state
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = sumDistanceForLinePlacemarks(doc),
+//                            text = sumDistanceForLinePlacemarks(doc),
+                            text = calculateRemainingDistance(currentLocation = Point(tMapView!!.locationPoint.latitude, tMapView.locationPoint.longitude), route = parseRouteFromXML(doc)),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -570,7 +664,7 @@ fun Btn_TrackCurrentLocation(tMapView: TMapView?, isCenter: MutableState<Boolean
 }
 
 @Composable
-fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCenter: MutableState<Boolean>, isRoute: MutableState<Boolean>) {
+fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCenter: MutableState<Boolean>, isRoute: MutableState<Boolean>, state: globalState = viewModel()) {
     val isToggled = remember { mutableStateOf(false) }
     val isItemAdded = remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
@@ -592,12 +686,12 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
 
     // 버튼을 애니메이션으로 조정할 수 있도록 상태 변수 선언
     val buttonSize by animateDpAsState(
-        targetValue = if (isToggled.value) screenWidthDp else floatButtonHeight, // 확장될 크기
-        animationSpec = tween(durationMillis = 300) // 애니메이션 설정
+        targetValue = if (isToggled.value) screenWidthDp else floatButtonHeight,
+        animationSpec = tween(durationMillis = 300)
     )
     val backGroundAlpha by animateFloatAsState(
-        targetValue = if (isToggled.value) 0.9f else 0.0f, // 확장될 크기
-        animationSpec = tween(durationMillis = 300) // 애니메이션 설정
+        targetValue = if (isToggled.value) 0.9f else 0.0f,
+        animationSpec = tween(durationMillis = 300)
     )
 
     isItemAdded.value = poiItems.value.isNotEmpty() || isRoute.value
@@ -639,7 +733,6 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
                     SearchButtonWithAnimation(
                         onClick = { poiList ->
                             poiItems.value = poiList
-                            // 검색 결과로 각각 마커 생성 후 지도로
                             isCenter.value = false
                             isToggled.value = false
                         },
@@ -648,21 +741,25 @@ fun Btn_SearchPOI(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isCent
                     )
                 }
                 Row (
-                  modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                  modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(top = 40.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val distances = listOf("1 km", "3 km", "5 km", "10 km", "30 km", "전국")
                     Box (
                         modifier = Modifier
-                            .width(40.dp)
-                            .height(30.dp)
+                            .width(45.dp)
+                            .height(35.dp)
                     ) {
                         Button(
                             onClick = { isExpanded = true }
                         ) { Text(selectedDistance, style = TextStyle(fontWeight = FontWeight.Bold)) }
                         DropdownMenu(
-                            modifier = Modifier.fillMaxSize().padding(vertical = 40.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 40.dp),
 
                             expanded = isExpanded,
                             onDismissRequest = { isExpanded = false }
@@ -955,60 +1052,8 @@ fun POIIemView(tMapView: TMapView?, poiItems: MutableState<List<Poi>>, isRoute: 
                             isRoute.value = true
                         }
                     })
-
                 })
             }
-        }
-    }
-}
-
-
-@Composable
-fun VoiceInputScreen() {
-    var speechText by remember { mutableStateOf(TextFieldValue("")) }
-    Column (
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.8f))
-            .pointerInput(Unit) {
-                detectTapGestures { }
-            }
-        ,
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("", modifier = Modifier.padding(bottom = 16.dp))
-
-        // 텍스트 필드
-        TextField(
-            value = speechText,
-            onValueChange = { speechText = it },
-            label = { Text("텍스트 입력") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 음성 입력 버튼
-        FloatingActionButton (
-            modifier = Modifier
-                .background(Color.White, shape = CircleShape)
-                .size(50.dp)
-            ,
-            onClick = {
-//            startSpeechRecognition()
-            }
-        ) {
-            Icon(
-                modifier = Modifier
-                    .fillMaxSize()
-//                    .padding(5.dp)
-                    .background(Color.White),
-                painter = painterResource(R.drawable.baseline_mic_24),
-                contentDescription = "음성 입력",
-            )
         }
     }
 }
